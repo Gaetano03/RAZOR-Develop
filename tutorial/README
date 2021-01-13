@@ -1,0 +1,8 @@
+#SingleMODES
+Applies one particular Model Reduction technique to an unsteady aerodynamic problem to extract flow primitives (modes) that 
+can be used for fluid dynamics analysis or flow reconstruction inside the sampling time interval outside the training points.
+
+#AdaptiveMODES
+Compute the flow reconstruction at the desired time instants inside the sampling interval combining together the bases coming from 
+different Model Reduction techniques. More global basis are defined over the sampling interval and, at each desired time for 
+reconstruction, the one which guarantees the less error is chosen.

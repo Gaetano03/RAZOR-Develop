@@ -1,0 +1,101 @@
+/* ------------------------------------------------------------------------------
+\file modes.cpp
+* \brief Driver routine for RAZOR: Computational reductino and Flow identification
+*
+* \version 2020.09 "Wolf"
+*
+* Copyright 2016-2020, Aerospace Centre of Excellence University of Strathclyde
+*
+* RAZOR is free software; you can redistribute it and/or
+* modify it under the terms of the GNU Lesser General Public
+* License as published by the Free Software Foundation; either
+* version 2.1 of the License, or (at your option) any later version.
+*
+* MODES is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+* Lesser General Public License for more details.
+*
+* You should have received a copy of the GNU Lesser General Public
+* License along with MODES. If not, see <http://www.gnu.org/licenses/>.
+* ------------------------------------------------------------------------------*/
+//
+#include "read_data.hpp"
+#include "write_data.hpp"
+#include "low_dimensional_model.hpp"
+//#include "low_dimensional_solution.hpp"
+//
+int main ( int argc, char *argv[] ) {
+//
+    std::cout << std::endl;
+    std::cout << "-----------------------------------------------------------------------" << std::endl;    
+    std::cout << "  RAZOR v2020.10 - Wolf" << std::endl;    
+    std::cout << "  Copyright 2016-2020, Aerospace Centre, University of Strathclyde" << std::endl;
+    std::cout << "-----------------------------------------------------------------------" << std::endl;
+    std::cout << std::endl;
+//
+    if ( argc != 3 ) {    
+        std::cout << std::endl;    
+        std::cout << " -> Usage: razor -[gs] configuration_file" << std::endl; 
+        std::cout << "    " << std::endl;
+        std::cout << "    Options:" << std::endl;
+        std::cout << "    -g     low dimensional model generation" << std::endl;
+        std::cout << "    -s     computing low dimensional solution" << std::endl;
+        std::cout << std::endl;
+        exit(3);
+    }
+//
+    std::string mode = argv[1];    
+    std::string filecfg = argv[2];
+//
+//------------------------------------------------------------------------------------
+//  Selection of execution mode from command line input:
+//  GENERATION OF LOW DIMENSIONAL MODEL = acquire snapshots and generate low 
+//                                        dimensional representation
+//  COMPUTATION OF LOW DIMENSIONAL SOLUTION = reconstruct a specific set of fields 
+//                                            at untried conditions
+//---------------------------------------------------------------------------------
+//
+    if ( mode == "-g" ) {
+        generate_lowdim_model = true;
+        compute_lowdim_solution = false;
+    } else if ( mode == "-s" ) {
+        generate_lowdim_model = false;
+        compute_lowdim_solution = true;
+    } else {
+        std::cout << std::endl;
+        std::cout << "-> Error: Unknonw execution mode" << std::endl;        
+        std::cout << std::endl;
+        exit (EXIT_FAILURE);        
+    }
+//
+//  Variables declaration
+    ld_model_data lowdim_data;
+    training_set_data training_data;
+    modal_identification_data modal_data;
+    manifold_learning_data manifold_data;
+    ld_error_data error_data;
+    target_set_data target_data;
+    aero_data aerodynamic_data;
+//
+//  Reading configuration file
+    read_config ( filecfg, lowdim_data, training_data, modal_data, manifold_data,
+      error_data, aerodynamic_data, target_data );
+    print_config ( lowdim_data, training_data, modal_data, manifold_data,
+      error_data, aerodynamic_data, target_data );
+//
+    std::cout << std::endl;  
+    std::cout << "-----------------------------------------------------------------------" << std::endl;
+    std::cout << std::endl;
+//
+    if ( generate_lowdim_model ) generate_low_dimensional_model ( lowdim_data, training_data, 
+        modal_data, manifold_data, error_data, aerodynamic_data );
+    if ( compute_lowdim_solution ) compute_low_dimensional_solution ( target_data, error_data, 
+        aerodynamic_data );
+//
+    std::cout << std::endl;
+    std::cout << " End of execution " << std::endl;
+    std::cout << "-----------------------------------------------------------------------" << std::endl;
+
+    return 0;
+}
