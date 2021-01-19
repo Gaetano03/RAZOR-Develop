@@ -305,6 +305,7 @@ enum su2key { NDIME, NELEM, NPOIN, NMARK, MARKER_TAG, MARKER_ELEMS, NOKEYW };
 class CMesh {
 //
 protected:
+    ld_model_data m_lowdim_data;
 //
     int sdim;
     int nelements;
@@ -314,6 +315,7 @@ protected:
     std::vector<std::vector<double>> coordinates;
     Eigen::MatrixXd Coords;
     Eigen::MatrixXi Connectivity;
+    Eigen::VectorXi PointID;
 //
 //  1D elements    
     int nsegm;
@@ -338,9 +340,11 @@ protected:
 public:
 //
 //  Constructor
-    CMesh() { npoints = -1; nelements = -1; nboundaries = -1;
-      nsegm = -1; ntria= -1; nquad = -1; ntetra = -1; nhexa = -1;
-      nprism = -1; npyra = -1; };
+    CMesh( ld_model_data lowdim_data) {
+        m_lowdim_data = lowdim_data;
+        npoints = -1; nelements = -1; nboundaries = -1;
+        nsegm = -1; ntria= -1; nquad = -1; ntetra = -1; nhexa = -1;
+        nprism = -1; npyra = -1; };
 //
     void read( std::ifstream &fstream, const std::string &format );
     void saveH5_volume();

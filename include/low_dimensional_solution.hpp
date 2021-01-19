@@ -22,8 +22,50 @@
 #define low_dimensional_solution_hpp
 //
 #include "Surrogates/rbf.h"
+#include "read_data.hpp"
 //
 using namespace smartuq::surrogate;
+//
+class CModalReconstruction {
+//
+protected:
+//
+    Eigen::MatrixXcd Phi;
+    target_set_data target_data;
+    training_set_data training_data;
+//
+public:
+//
+//Constructor
+    CModalReconstruction(){}
+//
+    virtual void load_lowdim(const std::string filename){}; //!< \brief load infos about the low dimensional model
+    virtual void compute_lowdim_surrogate(){}; //!< \brief Compute a low dimensional surrogate
+    virtual void compute_lowdim_sol(){}; //!< \brief Compute a low dimensional solution
+    virtual void compute_highdim_sol(){}; //!< \brief Project low dimensional solution back to the high-dim space
+    void save_solutions();
+//
+};
+//
+//!< \brief Class for online computation of low dimensional solutions through interpolation
+class CInterpolation : protected CModalReconstruction {
+//
+protected:
+//
+    Eigen::MatrixXcd Coefs;
+    std::vector<rbf> surrogates;
+//
+public:
+//
+//Constructor
+    CInterpolation() : CModalReconstruction() {}
+//
+    void load_lowdim(const std::string filename);
+    void compute_lowdim_surrogate();
+    void compute_lowdim_sol(){};
+    void compute_highdim_sol(){};
+//
+};
 //
 //------------------------------------------------------------------------------            
 // Functions

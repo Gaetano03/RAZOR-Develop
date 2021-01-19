@@ -137,7 +137,7 @@ void save_lowdim_model_info ( ld_model_data &lowdim_data, training_set_data &tra
     Group group03(file.createGroup("/TrainingSet"));
 //
 //  Checking the existence of a mesh file and possibly read it
-    CMesh mesh;
+    CMesh mesh(lowdim_data);
     if ( training_data.mesh_file != "NONE" ) {
 //
         std::ifstream mesh_file_stream;

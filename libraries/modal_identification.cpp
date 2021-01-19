@@ -75,8 +75,8 @@ void CModalIdentification_POD::compute_modes( Eigen::MatrixXd &snap_matrix ) {
 //  Solving eignevalues-eigenvector problem. Sirovich method of snapshots
 	Eigen::EigenSolver<Eigen::MatrixXd>  eigsol(xcmatrix);
 //
-	eigenVal = eigsol.eigenvalues().real();
-    eigenVec = eigsol.eigenvectors().real();
+	eigenVal = eigsol.eigenvalues();
+    eigenVec = eigsol.eigenvectors();
     sort_eigen( eigenVal, eigenVec );
 //
 //  Computing energy content associated to each mode

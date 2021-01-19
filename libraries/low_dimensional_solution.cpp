@@ -19,7 +19,38 @@
 * ------------------------------------------------------------------------------*/
 //
 #include "low_dimensional_solution.hpp"
-#include "read_data.hpp"
+//
+// -------------------------------------------------------------------------------------------
+void CInterpolation::load_lowdim(const std::string filename) {
+// -------------------------------------------------------------------------------------------
+    std::cout << "Here goes the code to load low dimensional model" << std::endl;
+//    std::vector<double> v1 = {1.0,2.0,3.0};
+//    std::vector<double> v2 = {5.0,6.0,7.0};
+//    params.push_back(v1);
+//    params.push_back(v2);
+//    for (int i = 0; i < 2; i++)
+//        std::cout << params[i][0];
+//    std::cout << std::endl;
+}
+//
+// -------------------------------------------------------------------------------------------
+void CInterpolation::compute_lowdim_surrogate() {
+// -------------------------------------------------------------------------------------------
+    double avgDt = 0.0;  //!< \brief Need to define this
+    RBF_CONSTANTS rbf_const {avgDt, 0.0};
+
+    for ( int i = 0; i < target_data.n_modes; i++ ){
+
+        std::vector<double> coefs ;
+        for (int j = 0 ; j < training_data.snap_list.size() ; j++)
+            coefs.push_back(Coefs(i,j).real());
+
+        surrogates.push_back( rbf(training_data.snap_pnts, coefs, get_key_rbf("LINEAR"), rbf_const) );
+        surrogates[i].build();
+
+    }
+
+}
 //
 // -------------------------------------------------------------------------------------------
 int compute_low_dimensional_solution ( const std::string filedata ) {
@@ -34,6 +65,8 @@ int compute_low_dimensional_solution ( const std::string filedata ) {
     //print_soldata ( lowdim_data, training_data, error_data, 
     //    modal_data, manifold_data ); 
 //
+//    CInterpolation InterpPOD;
+//    InterpPOD.load_lowdim("test.h5");
     return 0;
 }
 //

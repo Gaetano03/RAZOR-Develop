@@ -1290,8 +1290,8 @@ void CMesh::read( std::ifstream &fstream, const std::string &format ) {
                     case NELEM: {
 //
                         nelements = std::stoi(value);
-                        if ( sdim == 2 ) Connectivity = Eigen::MatrixXi::Zero(nelements,6);
-                        else Connectivity = Eigen::MatrixXi::Zero(nelements,10);
+                        if ( sdim == 2 ) Connectivity = (-1)*Eigen::MatrixXi::Ones(nelements,6);
+                        else Connectivity = (-1)*Eigen::MatrixXi::Ones(nelements,10);
 //
                         for ( int i = 0; i < nelements; i++ ) {
 //
@@ -1341,7 +1341,6 @@ void CMesh::read( std::ifstream &fstream, const std::string &format ) {
         case VTK:  { std::cout << "-> Error: VTK mesh format not supported yet" << std::endl; exit (EXIT_FAILURE); break; }
 //
     }
-    std::cout << "First 3 Coords:\n" << Coords.topRows(3) << std::endl;
 }
 //
 // --------------------------------------------------------------------------------------------------------------
