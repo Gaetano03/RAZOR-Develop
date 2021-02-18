@@ -1,8 +1,8 @@
 /* ------------------------------------------------------------------------------
-\file generate_low_dimensional_model.hpp
+\file low_dimensional_model.hpp
 * \brief Subroutines and functions to generate a low dimensional model.
 *
-* Copyright 2016-2020, Aerospace Centre of Excellence University of Strathclyde
+* Copyright 2016-20201, Aerospace Centre of Excellence University of Strathclyde
 *
 * RAZOR is free software; you can redistribute it and/or
 * modify it under the terms of the GNU Lesser General Public
@@ -23,9 +23,7 @@
 //
 #include "read_data.hpp"
 #include "modal_identification.hpp"
-#include "acquire_training_set.hpp"
 #include "write_data.hpp"
-#include <eigen3-hdf5.hpp>
 //
 //------------------------------------------------------------------------------
 //  Data structure
@@ -42,9 +40,5 @@ lowdim_strat read_ldmethod ( const std::string &ldstrat_string );
 //
 //!< \brief Generate low dimensional model and store it into a database
 int generate_low_dimensional_model ( const std::string filedata );
-//
-//!< \brief Save low dimensional model info into a database 
-void save_lowdim_model_info ( ld_model_data &lowdim_data, training_set_data &training_data, 
-	ld_error_data &error_data );
 //
 #endif

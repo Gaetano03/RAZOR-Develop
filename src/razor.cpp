@@ -10,15 +10,16 @@
 * License as published by the Free Software Foundation; either
 * version 2.1 of the License, or (at your option) any later version.
 *
-* MODES is distributed in the hope that it will be useful,
+* RAZOR is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
 * Lesser General Public License for more details.
 *
 * You should have received a copy of the GNU Lesser General Public
-* License along with MODES. If not, see <http://www.gnu.org/licenses/>.
+* License along with RAZOR. If not, see <http://www.gnu.org/licenses/>.
 * ------------------------------------------------------------------------------*/
 //
+#include "preprocessing.hpp"
 #include "low_dimensional_model.hpp"
 #include "low_dimensional_solution.hpp"
 //
@@ -33,9 +34,10 @@ int main ( int argc, char *argv[] ) {
 //
     if ( argc != 3 ) {    
         std::cout << std::endl;    
-        std::cout << " -> Usage: razor -[gs] configuration_file" << std::endl; 
+        std::cout << " -> Usage: razor -[pgs] configuration_file" << std::endl; 
         std::cout << "    " << std::endl;
         std::cout << "    Options:" << std::endl;
+        std::cout << "    -p     pre-processing data" << std::endl;
         std::cout << "    -g     low dimensional model generation" << std::endl;
         std::cout << "    -s     computing low dimensional solution" << std::endl;
         std::cout << std::endl;
@@ -55,10 +57,14 @@ int main ( int argc, char *argv[] ) {
 //
     if ( execmode == "-g" ) {        
         int status = generate_low_dimensional_model(filedata);
-    } else if ( execmode == "-s" ) {
+    } 
+    else if ( execmode == "-s" ) {
         int status = compute_low_dimensional_solution(filedata);
-//        
-    } else {
+    }
+    else if ( execmode == "-p" ) {
+        int status = preprocess_data(filedata);
+    }         
+    else {
         std::cout << std::endl;
         std::cout << "-> Error: Unknown execution mode" << std::endl;        
         std::cout << std::endl;

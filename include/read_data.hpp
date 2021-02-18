@@ -3,20 +3,20 @@
 * \brief All the information about the definition of the physical problem.
 *        The subroutines and functions are in the <i>read_Inputs.cpp</i> file.
 *
-* Copyright 2016-2020, Aerospace Centre of Excellence University of Strathclyde
+* Copyright 2016-2021, Aerospace Centre of Excellence University of Strathclyde
 *
-* MODES is free software; you can redistribute it and/or
+* RAZOR is free software; you can redistribute it and/or
 * modify it under the terms of the GNU Lesser General Public
 * License as published by the Free Software Foundation; either
 * version 2.1 of the License, or (at your option) any later version.
 *
-* MODES is distributed in the hope that it will be useful,
+* RAZOR is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
 * Lesser General Public License for more details.
 *
 * You should have received a copy of the GNU Lesser General Public
-* License along with MODES. If not, see <http://www.gnu.org/licenses/>.
+* License along with RAZOR. If not, see <http://www.gnu.org/licenses/>.
 * ------------------------------------------------------------------------------*/
 //
 #ifndef read_data_hpp
@@ -30,10 +30,12 @@
 #include <string>
 #include <vector>
 #include <iomanip>
+#include <numeric>
 //
 #include "Eigen/Dense"
 #include "Eigen/Eigenvalues"
 #include "H5Cpp.h"
+#include <eigen3-hdf5.hpp>
 //
 using namespace Eigen;
 using namespace H5;
@@ -80,22 +82,29 @@ const int RECORD_DELIMITER_LENGTH = 4;
 //------------------------------------------------------------------------------
 //
 struct ld_model_data {
-    int n_flds;                      //!< \brief Number of fields to process  
-    int n_meth;                      //!< \brief Number of reduction methods to consider    
-    std::vector<int> fields;         //!< \brief Fields ID to process
-    std::string field_type;          //!< \brief Defines if scalar or vector field to be processed    
-    std::string field_attr;          //!< \brief Defines if field is a surface or volume field wrt to the mesh   
-    std::string lowdim_model_name;   //!< \brief Flag write database basis extraction        
-    std::string ref_field;           //!< \brief Reference field to be subtracted
-    std::vector<std::string> flds_name;           //!< \brief Name of fields to process    
+    int n_flds;                      //!< \brief Number of fields to process. Determined from H5 database (init to 0) in low_dimensional_model.cpp 
+    int n_meth;                      //!< \brief Number of reduction methods to consider      
+    std::string database_name;       //!< \brief Flag write database basis extraction        
     std::vector<std::string> reduction_strategy;  //!< \brief Flag to set adaptive solution or single method 
 //
-    std::string inpstn_lowdim_model_name;   //!<brief Configuration input string for lowdim_model_name keyword
-    std::string inpstn_flag_fields;         //!<brief Configuration input string for flag_fields keyword
-    std::string inpstn_fields_name;         //!<brief Configuration input string for field_name keyword
-    std::string inpstn_fields_attribute;    //!<brief Configuration input string for field_attr keyword
-    std::string inpstn_ref_field;           //!<brief Configuration input string for ref_field keyword
+    std::string inpstn_database_name;       //!<brief Configuration input string for database_name keyword
     std::string inpstn_reduction_strategy;  //!<brief Configuration input string for reduction strategy keyword
+};
+
+struct flds_data {
+    int n_flds;                                 //!< \brief Number of fields to process
+    std::vector<int> fields;                    //!< \brief Fields ID to process
+    std::string field_type;                     //!< \brief Defines if scalar or vector field to be processed
+    std::string field_attr;        //!< \brief Defines if field is a surface or volume field wrt to the mesh as well as 
+    std::vector<std::string> flds_name;         //!< \brief Name of fields to process
+    std::string ref_field;                      //!< \brief Reference field to be subtracted    
+    std::string database_name;                     //!< \brief Name of the H5 database to save to
+//
+    std::string inpstn_database_name;              //!<brief Configuration input string for database_name keyword
+    std::string inpstn_flag_fields;             //!<brief Configuration input string for flag_fields keyword
+    std::string inpstn_fields_name;             //!<brief Configuration input string for field_name keyword
+    std::string inpstn_fields_attribute;        //!<brief Configuration input string for field_attr keyword
+    std::string inpstn_ref_field;               //!<brief Configuration input string for ref_field keyword
 };
 //
 struct training_set_data {
@@ -167,7 +176,8 @@ struct target_set_data {
     int n_parm;      //!< \brief Number of parameters
     int n_modes;     //!< \brief Number of modes used in reconstruction formula        
     double en;       //!< \brief Energetic content desired for reconstruction
-    std::vector<std::vector<double>> target_pnts;    //!< \brief Vector of target points in parameter space      
+    std::vector<std::vector<double>> target_pnts;    //!< \brief Vector of target points in parameter space
+    std::string database_name;               //!< \brief Name of the H5 database used for reconstruction         
     std::string target_fmt;                  //!< \brief Format of target files for visualisation
     std::string recon_fmla;                  //!< \brief Reconstruction formula
     std::string coeff_fmla;                  //!< \brief Formula to compute modal coefficients
@@ -176,6 +186,7 @@ struct target_set_data {
     std::vector<std::string> target_ldmodel; //!< \brief List of low dimensional models to compute solution files for reconstruction
     std::vector<std::string> target_lderror; //!< \brief File containing the error
 //
+    std::string inpstn_database_name;                       //!<brief Configuration input string for database_name keyword
     std::string inpstn_target_list;                 //!<brief Configuration input string for target_list keyword
     std::string inpstn_target_fmt;                  //!<brief Configuration input string for target_fmt keyword
     std::string inpstn_flag_method_coefficients;    //!<brief Configuration input string for flag_method_coefficients keyword
@@ -229,7 +240,7 @@ struct plot3d_info {
 };
 //
 // List of keywords in config file
-enum keywords { LOW_DIMENSIONAL_MODEL_NAME,  // Low dimensional model keywords
+enum keywords { DATABASE_NAME,  // Low dimensional model keywords         //devnote: LOW_DIMENSIONAL_MODEL should be called DATABASE_NAME and cfg structured differently. Only a formality does not effect execution.
                 REDUCTION_STRATEGY,   
                 FIELDS_ID,
                 FIELDS_NAME,
@@ -292,30 +303,28 @@ enum fieldtype { SCALAR, VECTOR,
 // List of reference solutions for subtraction
 enum refsol { NONE, MEAN_FIELD, INITIAL_FIELD, CONSTANT_FIELD, READ_FROM_FILE };
 //
-// List of file format. Applies only to data for low-dimensional model generation
-enum datfmt { RAZR, HDF5 };
-//
 // List of mesh formats
 enum mshfmt { SU2, CGNSM, VTK };
 //
 // List of mesh formats
-enum su2key { NDIME, NELEM, NPOIN, NMARK, MARKER_TAG, MARKER_ELEMS, NOKEYW };
+enum su2key { NDIME, NELEM, NPOIN, MARKER_TAG, MARKER_ELEMS, NOKEYW};    //devnote: NMARK deleted
 //
 //  /*!< \brief Main class for object mesh
 class CMesh {
 //
 protected:
-    ld_model_data m_lowdim_data;
+    flds_data m_fields_data;   
 //
     int sdim;
     int nelements;
-    int nboundaries;
-//
     int npoints;
+//
     std::vector<std::vector<double>> coordinates;
     Eigen::MatrixXd Coords;
     Eigen::MatrixXi Connectivity;
     Eigen::VectorXi PointID;
+//
+    std::string mtag;
 //
 //  1D elements    
     int nsegm;
@@ -340,18 +349,17 @@ protected:
 public:
 //
 //  Constructor
-    CMesh( ld_model_data lowdim_data) {
-        m_lowdim_data = lowdim_data;
-        npoints = -1; nelements = -1; nboundaries = -1;
-        nsegm = -1; ntria= -1; nquad = -1; ntetra = -1; nhexa = -1;
-        nprism = -1; npyra = -1; };
+    CMesh ( flds_data fields_data ) {
+        m_fields_data = fields_data;
+        npoints = -1; nelements = -1; nsegm = -1; 
+        ntria= -1; nquad = -1; ntetra = -1;
+        nhexa = -1; nprism = -1; npyra = -1; };
 //
-    void read( std::ifstream &fstream, const std::string &format );
-    void saveH5_volume();
-    void saveH5_surface();
-
+    void read ( std::ifstream &fstream, const std::string &format );
+//
     Eigen::MatrixXd GetCoords();
     Eigen::MatrixXi GetConnectivity();
+    Eigen::VectorXi GetPointID();
 //
 };
 //
@@ -383,14 +391,21 @@ mshfmt read_mesh_format ( const std::string &format );
 //!< \brief Check SU@ mesh keyword
 su2key su2mesh_keyword( const std::string &key );
 //
+//!< \brief Read data needed for processing of snapshots and mesh
+void read_procdata ( const std::string filename, flds_data &fields_data,
+    training_set_data &training_data );
+//
 //!< \brief Read data needed for low-dimensional model generation
-void read_gendata ( const std::string filename, const std::string filefmt, ld_model_data 
-    &lowdim_data, training_set_data &training_data, ld_error_data &error_data, 
-    modal_identification_data &modal_data, manifold_learning_data &manifold_data );
+void read_gendata ( const std::string filename, ld_model_data 
+    &lowdim_data, ld_error_data &error_data, modal_identification_data &modal_data,
+    manifold_learning_data &manifold_data );
 //
 //!< \brief Read data needed for low-dimensional solution computation
 void read_soldata ( const std::string filename, target_set_data &target_data, 
     aero_data &aerodynamic_data );
+//
+//!< \brief Read low dimensional model data
+void read_fields_data( flds_data &fields_data );
 //
 //!< \brief Read low dimensional model data
 void read_lowdim_model_data( ld_model_data &lowdim_data );
@@ -437,5 +452,11 @@ std::vector<Eigen::VectorXd> read_plot3d ( std::string filename, plot3d_info Inf
 //
 //!< \brief Read and change su2 file
 void modify_su2_cfg ( std::string file_in, std::string file_out, double dt_res );
+//
+//!< \brief Save (string) attributes to a group in HDF5
+void create_h5_attr (Group group, const std::string att_name, const std::string att_val);       //devnote: nothing to do with reading, but not sure if write_data.cpp will be used ultimately. Saving to Group only and only strings.
+//
+//!< \brief Read (string) attribute back to string from H5
+std::string read_h5_attr ( Group group, const std::string att_name );
 //
 #endif

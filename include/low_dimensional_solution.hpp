@@ -2,7 +2,7 @@
 \file low_dimensional_solution.hpp
 * \brief Functions to reconstruct a solution at untried/untested conditions.
 *
-* Copyright 2016-2020, Aerospace Centre of Excellence University of Strathclyde
+* Copyright 2016-2021, Aerospace Centre of Excellence University of Strathclyde
 *
 * RAZOR is free software; you can redistribute it and/or
 * modify it under the terms of the GNU Lesser General Public
@@ -26,44 +26,66 @@
 //
 using namespace smartuq::surrogate;
 //
+
 class CModalReconstruction {
 //
+//changed coeff eigens to Xd from Xcd
 protected:
 //
-    Eigen::MatrixXcd Phi;
-    target_set_data target_data;
-    training_set_data training_data;
+    Eigen::MatrixXcd m_Phi_flds; //!< \brief Matrix of flow features computed through a generic linear algorithm for all fields
+    Eigen::MatrixXd m_Coefs_flds;
+    Eigen::MatrixXcd m_Phi; //!< \brief Matrix of flow features computed through a generic linear algorithm for a specific field
+    Eigen::MatrixXd m_Coefs; //!< \brief Training coefficients with each column representing evolution for a specific mode over the parameter space
+    MatrixXd m_Rec_field; //!< \brief Matrix containing high-dimensional solution at each target point (per column)
+    target_set_data m_target_data;
+    training_set_data m_training_data;
+    flds_data m_flds_data;
+    std::vector<double> m_mean_params; //!< \brief vector of means (needed for feature scaling)
+    std::vector<double> m_std_params; //!< \brief vector of standard deviations (needed for feature scaling)
+    std::vector<std::vector<double> > m_train_pnts_scaled; //!< \brief scaled list of parameters for interpolation purposes
+    std::vector<std::vector<double> > m_targ_pnts_scaled;
 //
 public:
 //
 //Constructor
-    CModalReconstruction(){}
+    CModalReconstruction() = default;
+
+    CModalReconstruction(target_set_data &target_data, training_set_data &training_data, flds_data &fields_data) :
+        m_target_data(target_data), m_training_data(training_data), m_flds_data(fields_data)
+    {
+    }
+
 //
-    virtual void load_lowdim(const std::string filename){}; //!< \brief load infos about the low dimensional model
-    virtual void compute_lowdim_surrogate(){}; //!< \brief Compute a low dimensional surrogate
-    virtual void compute_lowdim_sol(){}; //!< \brief Compute a low dimensional solution
-    virtual void compute_highdim_sol(){}; //!< \brief Project low dimensional solution back to the high-dim space
+    void features_scaling(); //!< \brief scale parameters if they are on different ranges
+    virtual void load_lowdim(const std::string filename) {}; //!< \brief load infos about the low dimensional model
+    virtual void compute_lowdim_surrogate(const int field_id) {}; //!< \brief Compute a low dimensional surrogate
+    virtual void compute_lowdim_sol(const int field_id) {}; //!< \brief Compute a low dimensional solution
+    virtual void compute_highdim_sol(const int field_id) {}; //!< \brief Project low dimensional solution back to the high-dim space
     void save_solutions();
 //
 };
 //
 //!< \brief Class for online computation of low dimensional solutions through interpolation
-class CInterpolation : protected CModalReconstruction {
+class CInterpolation : public CModalReconstruction {
 //
 protected:
 //
-    Eigen::MatrixXcd Coefs;
-    std::vector<rbf> surrogates;
+    MatrixXd m_coefs_interp; //!< \brief Matrix containing low dimensional solution at each target point (columns represent lowdim sol at each target point)
+    std::vector<std::vector<rbf> > surrogates; //!< \brief vector containing surrogates for each mode coefficient
 //
 public:
 //
 //Constructor
-    CInterpolation() : CModalReconstruction() {}
+    CInterpolation( target_set_data &target_data, training_set_data &training_data, flds_data &fields_data ) :
+        CModalReconstruction(target_data, training_data, fields_data)
+        {
+            surrogates = std::vector<std::vector<rbf> >(fields_data.n_flds);
+        }
 //
     void load_lowdim(const std::string filename);
-    void compute_lowdim_surrogate();
-    void compute_lowdim_sol(){};
-    void compute_highdim_sol(){};
+    void compute_lowdim_surrogate(const int field_id);
+    void compute_lowdim_sol(const int field_id);
+    void compute_highdim_sol(const int field_id);
 //
 };
 //

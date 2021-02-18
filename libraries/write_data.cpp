@@ -2,25 +2,28 @@
 \file write_data.cpp
 * \brief Print and write defintions.
 *
-* Copyright 2016-2020, Aerospace Centre of Excellence University of Strathclyde
+* Copyright 2016-2021, Aerospace Centre of Excellence University of Strathclyde
 *
-* MODES is free software; you can redistribute it and/or
+* RAZOR is free software; you can redistribute it and/or
 * modify it under the terms of the GNU Lesser General Public
 * License as published by the Free Software Foundation; either
 * version 2.1 of the License, or (at your option) any later version.
 *
-* MODES is distributed in the hope that it will be useful,
+* RAZOR is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
 * Lesser General Public License for more details.
 *
 * You should have received a copy of the GNU Lesser General Public
-* License along with MODES. If not, see <http://www.gnu.org/licenses/>.
+* License along with RAZOR. If not, see <http://www.gnu.org/licenses/>.
 * ------------------------------------------------------------------------------*/
 //
 #include "read_data.hpp"
 #include "write_data.hpp"
 //
+
+/*
+
 // ----------------------------------------------------------------------------------------
 void print_gendata ( ld_model_data &lowdim_data, training_set_data &training_data, ld_error_data 
     &error_data, modal_identification_data &modal_data, manifold_learning_data &manifold_data ) {
@@ -113,6 +116,9 @@ void print_gendata ( ld_model_data &lowdim_data, training_set_data &training_dat
     err_data.close();
 }
 //
+
+*/
+
 // ----------------------------------------------------------------------------------------
 void print_soldata ( target_set_data &target_data, aero_data &aerodynamic_data ) {
 // ----------------------------------------------------------------------------------------

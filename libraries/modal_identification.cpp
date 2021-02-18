@@ -1,8 +1,8 @@
 /* ------------------------------------------------------------------------------
-\file modal_extraction.cpp
+\file modal_identification.cpp
 * \brief Subroutines and functions to generate a low dimensional model.
 *
-* Copyright 2016-2020, Aerospace Centre of Excellence University of Strathclyde
+* Copyright 2016-2021, Aerospace Centre of Excellence University of Strathclyde
 *
 * RAZOR is free software; you can redistribute it and/or
 * modify it under the terms of the GNU Lesser General Public
@@ -18,7 +18,6 @@
 * License along with RAZOR. If not, see <http://www.gnu.org/licenses/>.
 * ------------------------------------------------------------------------------*/
 //
-#include "read_data.hpp"
 #include "modal_identification.hpp"
 //
 //------------------------------------------------------------------------------            
@@ -114,4 +113,55 @@ void CModalIdentification_POD::get_modal_coefficients() {
 //
 }
 //
-
+// -------------------------------------------------------------------------------------------
+void CModalIdentification_POD::save_modal_representation( ld_model_data &lowdim_data, const int field_id ){
+// -------------------------------------------------------------------------------------------
+//
+    std::cout << " Saving modal representation " << std::endl;
+//    
+    int &fld_n = lowdim_data.n_flds;
+//
+//  Initialise extended matrices. Fields are stored sequentially wrt rows
+    if ( field_id == 0 ){
+        std::cout << " Initialising extended matrices for modes and coefficients " << std::endl;
+        phi_flds.setZero( nr * fld_n, nm );
+        alpha_flds.setZero( ns * fld_n, nm );
+    }
+//
+//  Resize extended matrices if nm_[n] > nm_[n-1]
+    if ( nm > phi_flds.cols() ) {
+        phi_flds.resize(Eigen::NoChange, nm);           //devnote: resize sets everything zero if size changes at all. Probably fine, but setZero() again explicitly?
+        alpha_flds.resize(Eigen::NoChange, nm);
+    }
+//
+//  Writing to temporary Eigen::MatrixX containing fields sequentially
+    int st = field_id * nr;
+    int end = (field_id+1) * nr;
+    int i = 0;
+    for (st; st < end; st++){
+        phi_flds.row(st) = phi.row(i);
+        i++;
+    }
+    st = field_id * ns;
+    end = (field_id+1) * ns;
+    i = 0;
+    for (st; st < end; st++){
+        alpha_flds.row(st) = alpha.row(i);  
+        i++;
+    }   
+//
+//  Save when all fields are stored, write attributes
+    if ( field_id == fld_n-1 ) {
+//      Open HDF5 file
+        H5File file;
+        const std::string &filename = { lowdim_data.database_name };
+        file.openFile(filename, H5F_ACC_RDWR, FileAccPropList::DEFAULT);
+//
+        EigenHDF5::save(file, "/LDmodels/PODbasis", phi_flds);     
+        EigenHDF5::save(file, "/LDmodels/PODcoeff", alpha_flds);       
+        std::cout << "\n Data written to HDF5 database " << std::endl;
+        file.close();
+    }  
+//
+}
+//

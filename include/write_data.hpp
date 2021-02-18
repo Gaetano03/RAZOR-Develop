@@ -2,20 +2,20 @@
 \file write_data.hpp
 * \brief Functions to write information and data
 *
-* Copyright 2016-2020, Aerospace Centre of Excellence University of Strathclyde
+* Copyright 2016-2021, Aerospace Centre of Excellence University of Strathclyde
 *
-* MODES is free software; you can redistribute it and/or
+* RAZOR is free software; you can redistribute it and/or
 * modify it under the terms of the GNU Lesser General Public
 * License as published by the Free Software Foundation; either
 * version 2.1 of the License, or (at your option) any later version.
 *
-* MODES is distributed in the hope that it will be useful,
+* RAZOR is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
 * Lesser General Public License for more details.
 *
 * You should have received a copy of the GNU Lesser General Public
-* License along with MODES. If not, see <http://www.gnu.org/licenses/>.
+* License along with RAZOR. If not, see <http://www.gnu.org/licenses/>.
 * ------------------------------------------------------------------------------*/
 //
 #ifndef write_data_hpp
@@ -31,12 +31,12 @@
 const int CGNS_STRING_SIZE = 33;
 //
 //------------------------------------------------------------------------------            
-// Functions
+// Functions                                                                     
 //------------------------------------------------------------------------------            
 //
 //!< \brief Print to screen data needed for low-dimensional model generation
 void print_gendata ( ld_model_data &lowdim_data, training_set_data &training_data, ld_error_data 
-    &error_data, modal_identification_data &modal_data, manifold_learning_data &manifold_data ) ;
+    &error_data, modal_identification_data &modal_data, manifold_learning_data &manifold_data );        //devnote: again I guess I will need to split print_gendata into two exactly as done with read_gendata
 //
 //!< \brief Print to screen data needed for low-dimensional solution computation
 void print_soldata ( target_set_data &target_data, aero_data &aerodynamic_data ); 

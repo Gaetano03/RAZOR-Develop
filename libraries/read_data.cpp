@@ -2,7 +2,7 @@
 \file read_data.cpp
 * \brief Subroutines and functions to read configuration file.
 *
-* Copyright 2016-2020, Aerospace Centre of Excellence University of Strathclyde
+* Copyright 2016-2021, Aerospace Centre of Excellence University of Strathclyde
 *
 * RAZOR is free software; you can redistribute it and/or
 * modify it under the terms of the GNU Lesser General Public
@@ -48,8 +48,8 @@ inline void wait_on_enter () {
 keywords read_keyword_type( const std::string &key_string ) {
 // -------------------------------------------------------------------------------------------    
 //
-    if ( key_string == "LOW_DIMENSIONAL_MODEL_NAME" )
-        return LOW_DIMENSIONAL_MODEL_NAME;
+    if ( key_string == "DATABASE_NAME" )
+        return DATABASE_NAME;
     else if ( key_string == "REDUCTION_STRATEGY" )
         return REDUCTION_STRATEGY;
     else if( key_string == "FIELDS_ID" )
@@ -237,23 +237,6 @@ refsol read_refsol_type ( const std::string &reftyp ) {
 }
 //
 // -------------------------------------------------------------------------------------------
-datfmt read_data_format ( const std::string &datfmt ) {
-// -------------------------------------------------------------------------------------------
-//
-    if ( datfmt == "RAZR" )
-        return RAZR;
-    else if ( datfmt == "HDF5" )
-        return HDF5;
-    else {
-//
-        std::cout << std::endl;
-        std::cout << "-> Error: Unknown data file format" << std::endl;        
-        std::cout << std::endl;
-        exit (EXIT_FAILURE);
-    }
-}
-//
-// -------------------------------------------------------------------------------------------
 mshfmt read_mesh_format ( const std::string &format ) {
 // -------------------------------------------------------------------------------------------
 //
@@ -282,8 +265,6 @@ su2key su2mesh_keyword( const std::string &key ) {
         return NELEM;
     else if ( key == "NPOIN" )
         return NPOIN;
-    else if ( key == "NMARK" )
-        return NMARK;
     else if ( key == "MARKER_TAG" )
         return MARKER_TAG;
     else if ( key == "MARKER_ELEMS" )
@@ -294,18 +275,17 @@ su2key su2mesh_keyword( const std::string &key ) {
 }
 //
 // ----------------------------------------------------------------------------------------
-void read_gendata ( const std::string filename, const std::string filefmt, ld_model_data 
-    &lowdim_data, training_set_data &training_data, ld_error_data &error_data, 
-    modal_identification_data &modal_data, manifold_learning_data &manifold_data ) {
+void read_procdata ( const std::string filename, flds_data &fields_data,
+    training_set_data &training_data ) {
 // ----------------------------------------------------------------------------------------
 //
-//  Low dimensional data
-    lowdim_data.inpstn_reduction_strategy = "POD";
-    lowdim_data.inpstn_lowdim_model_name = {};
-    lowdim_data.inpstn_flag_fields = {};      
-    lowdim_data.inpstn_fields_name = {};      
-    lowdim_data.inpstn_fields_attribute = "VOLUME";
-    lowdim_data.inpstn_ref_field = "NONE";            
+//  Fields data 
+    fields_data.inpstn_database_name = {};
+    fields_data.inpstn_flag_fields = {};      
+    fields_data.inpstn_fields_name = {};      
+    fields_data.inpstn_fields_attribute = "VOLUME";
+    fields_data.inpstn_ref_field = "NONE";
+                
 //
 //  Training set data
     training_data.inpstn_snapshot_list = {};
@@ -314,6 +294,71 @@ void read_gendata ( const std::string filename, const std::string filefmt, ld_mo
     training_data.inpstn_flow_type = "STEADY";  
     training_data.inpstn_mesh_file = "NONE";
     training_data.inpstn_mesh_fmt = {};    
+//
+// ----------------------------------------------------------------------------------------------------------------------        
+//  Reading each line of the input file into a string that will be parsed later on to avoid issues with dependencies
+//  or have to introduce multiple times the same information. In this way the information in the configuration file
+//  can be entered in whatsoever order. The file is the ASCII configuration file.
+// ----------------------------------------------------------------------------------------------------------------------
+//
+    std::ifstream cFile ( filename );
+    if ( cFile.is_open() ) {
+//
+        size_t delimiterPos; 
+        std::string name, value;
+        std::string line;
+//
+        while ( getline(cFile, line) ) {
+//            
+            line.erase( remove_if(line.begin(), line.end(), isspace), line.end() );  //include ::  in front of isspace if using namespace std
+            if ( line[0] == '#' || line.empty() )
+                continue;
+//
+            delimiterPos = line.find("=");
+            name = line.substr(0, delimiterPos);
+            value = line.substr(delimiterPos + 1);
+//
+            switch (read_keyword_type(name)) {                
+                case DATABASE_NAME: { fields_data.inpstn_database_name = value; break; } 
+                case FIELDS_ID: { fields_data.inpstn_flag_fields = value; break; }
+                case FIELDS_NAME: { fields_data.inpstn_fields_name = value; break; }
+                case FIELDS_ATTRIBUTE: { fields_data.inpstn_fields_attribute = value; break; }
+                case FLAG_REF_FIELD: { fields_data.inpstn_ref_field = value; break; }
+                case SNAPSHOT_LIST: { training_data.inpstn_snapshot_list = value; break; }
+                case SNAPSHOT_FMT: { training_data.inpstn_snapshot_fmt = value; break; }
+                case NAME_PARM: { training_data.inpstn_name_parm = value; break; }                 
+                case FLOW_TYPE: { training_data.inpstn_flow_type = value; break; }                
+                case MESH_FILE: { training_data.inpstn_mesh_file = value; break; }
+                case MESH_FMT: { training_data.inpstn_mesh_fmt = value; break; }                          
+                default: { break; } 
+            }
+        }
+        cFile.close();                
+//
+    } 
+    else {
+        std::cout << std::endl;
+        std::cout << "-> Error: Unable to open configuration file." << std::endl;
+        std::cout << filename  << std::endl;
+        std::cout << std::endl;
+        exit (EXIT_FAILURE);
+    }
+//
+//  Parsing each input string and assign values to variables and arrays
+    read_fields_data( fields_data );
+    read_training_set_data( training_data );
+//
+}
+//
+// ----------------------------------------------------------------------------------------
+void read_gendata ( const std::string filename, ld_model_data &lowdim_data,
+    ld_error_data &error_data, modal_identification_data &modal_data,
+    manifold_learning_data &manifold_data ) {
+// ----------------------------------------------------------------------------------------
+//
+//  Low dimensional data
+    lowdim_data.inpstn_reduction_strategy = "POD";
+    lowdim_data.inpstn_database_name = {};           
 //
 //  Error data
     error_data.inpstn_error_file = {};
@@ -339,76 +384,57 @@ void read_gendata ( const std::string filename, const std::string filefmt, ld_mo
 // ----------------------------------------------------------------------------------------------------------------------        
 //  Reading each line of the input file into a string that will be parsed later on to avoid issues with dependencies
 //  or have to introduce multiple times the same information. In this way the information in the configuration file
-//  can be entered in whatsoever order. The file is the ASCII configuration file if generationg low dimensinoal model
-//  otherwise, in the case of solution reconstruction the file is the HDF5 containing the low dimensional model
+//  can be entered in whatsoever order. The file is the ASCII configuration file.
 // ----------------------------------------------------------------------------------------------------------------------
 //
-    switch ( read_data_format (filefmt) ) {
-//        
-        case RAZR: {
+    std::ifstream cFile ( filename );
+    if ( cFile.is_open() ) {
 //
-            std::ifstream cFile ( filename );
-            if ( cFile.is_open() ) {
+        size_t delimiterPos; 
+        std::string name, value;
+        std::string line;
 //
-                size_t delimiterPos; 
-                std::string name, value;
-                std::string line;
+        while ( getline(cFile, line) ) {
+//          
+            line.erase( remove_if(line.begin(), line.end(), isspace), line.end() );  //include ::  in front of isspace if using namespace std
+            if ( line[0] == '#' || line.empty() )
+                continue;
 //
-                while ( getline(cFile, line) ) {
-//            
-                    line.erase( remove_if(line.begin(), line.end(), isspace), line.end() );  //include ::  in front of isspace if using namespace std
-                    if ( line[0] == '#' || line.empty() )
-                        continue;
-                    delimiterPos = line.find("=");
-                    name = line.substr(0, delimiterPos);
-                    value = line.substr(delimiterPos + 1);
+            delimiterPos = line.find("=");
+            name = line.substr(0, delimiterPos);
+            value = line.substr(delimiterPos + 1);
 //
-                    switch (read_keyword_type(name)) {                
-                        case LOW_DIMENSIONAL_MODEL_NAME: { lowdim_data.inpstn_lowdim_model_name = value; break; }
-                        case REDUCTION_STRATEGY: { lowdim_data.inpstn_reduction_strategy = value; break; }
-                        case FIELDS_ID: { lowdim_data.inpstn_flag_fields = value; break; }
-                        case FIELDS_NAME: { lowdim_data.inpstn_fields_name = value; break; }
-                        case FIELDS_ATTRIBUTE: { lowdim_data.inpstn_fields_attribute = value; break; }
-                        case FLAG_REF_FIELD: { lowdim_data.inpstn_ref_field = value; break; }
-                        case SNAPSHOT_LIST: { training_data.inpstn_snapshot_list = value; break; }
-                        case SNAPSHOT_FMT: { training_data.inpstn_snapshot_fmt = value; break; }
-                        case NAME_PARM: { training_data.inpstn_name_parm = value; break; }                 
-                        case FLOW_TYPE: { training_data.inpstn_flow_type = value; break; }                
-                        case MESH_FILE: { training_data.inpstn_mesh_file = value; break; }
-                        case MESH_FMT: { training_data.inpstn_mesh_fmt = value; break; }                
-                        case SPOD_FILTER_SIZE: { modal_data.inpstn_spod_filter_size = value; break; }
-                        case SPOD_FILTER_TYPE: { modal_data.inpstn_spod_filter_type = value; break; }
-                        case SPOD_SIGMA: { modal_data.inpstn_spod_sigma = value; break; }
-                        case SPOD_FLAG_BC: { modal_data.inpstn_spod_flag_bc = value; break; }
-                        case DMD_RANK: { modal_data.inpstn_dmd_rank = value; break; }
-                        case DMD_COEFF_FLAG: { modal_data.inpstn_dmd_coef_flag = value; break; }
-                        case MR_DMD_MAX_LEVELS: { modal_data.inpstn_mr_dmd_max_levels = value; break; }
-                        case MR_DMD_MAX_CYCLES: { modal_data.inpstn_mr_dmd_max_cycles = value; break; }
-                        case RDMD_RANK: { modal_data.inpstn_rdmd_rank = value; break; }
-                        case ERROR_FMLA: { error_data.inpstn_error_fmla = value; break; }
-                        case ERROR_EVAL_POINTS: { error_data.inpstn_error_points = value; break; }
-                        case ERROR_SOLUTION_FMT: { error_data.inpstn_error_sol_fmt = value; break; }
-                        case RESID_DT_BDF: { error_data.inpstn_resid_dt_bdf = value; break; }                                
-                        default: { break; } 
-                    }
-                }
-                cFile.close();                
+            switch (read_keyword_type(name)) {                
+                case DATABASE_NAME: { lowdim_data.inpstn_database_name = value; break; }
+                case REDUCTION_STRATEGY: { lowdim_data.inpstn_reduction_strategy = value; break; }                  
+                case SPOD_FILTER_SIZE: { modal_data.inpstn_spod_filter_size = value; break; }
+                case SPOD_FILTER_TYPE: { modal_data.inpstn_spod_filter_type = value; break; }
+                case SPOD_SIGMA: { modal_data.inpstn_spod_sigma = value; break; }
+                case SPOD_FLAG_BC: { modal_data.inpstn_spod_flag_bc = value; break; }
+                case DMD_RANK: { modal_data.inpstn_dmd_rank = value; break; }
+                case DMD_COEFF_FLAG: { modal_data.inpstn_dmd_coef_flag = value; break; }
+                case MR_DMD_MAX_LEVELS: { modal_data.inpstn_mr_dmd_max_levels = value; break; }
+                case MR_DMD_MAX_CYCLES: { modal_data.inpstn_mr_dmd_max_cycles = value; break; }
+                case RDMD_RANK: { modal_data.inpstn_rdmd_rank = value; break; }
+                case ERROR_FMLA: { error_data.inpstn_error_fmla = value; break; }
+                case ERROR_EVAL_POINTS: { error_data.inpstn_error_points = value; break; }
+                case ERROR_SOLUTION_FMT: { error_data.inpstn_error_sol_fmt = value; break; }
+                case RESID_DT_BDF: { error_data.inpstn_resid_dt_bdf = value; break; }                                
+                default: { break; } 
+            }
+        }
+        cFile.close();                
 //
-            } else {
-                std::cout << std::endl;
-                std::cout << "-> Error: Unable to open configuration file." << std::endl;
-                std::cout << filename  << std::endl;
-                std::cout << std::endl;
-                exit (EXIT_FAILURE);
-            } break; }
-//
-        case HDF5: { std::cout << "coming ..." << std::endl; break; }
-//
+    } else {
+        std::cout << std::endl;
+        std::cout << "-> Error: Unable to open configuration file." << std::endl;
+        std::cout << filename  << std::endl;
+        std::cout << std::endl;
+        exit (EXIT_FAILURE);
     }
 //
 //  Parsing each input string and assign values to variables and arrays
     read_lowdim_model_data( lowdim_data );
-    read_training_set_data( training_data );
     read_error_data( error_data );
 //
     if ( std::any_of( lowdim_data.reduction_strategy.begin(), lowdim_data.reduction_strategy.end(), [](std::string a){return a == "POD";} ) ||
@@ -423,13 +449,13 @@ void read_gendata ( const std::string filename, const std::string filefmt, ld_mo
 //
 }
 //
-//
 // ----------------------------------------------------------------------------------------
 void read_soldata ( const std::string filename, target_set_data &target_data, 
     aero_data &aerodynamic_data ) {
 // ----------------------------------------------------------------------------------------
 //
-//  Target set data  
+//  Target set data
+    target_data.inpstn_database_name  = {};
     target_data.inpstn_target_list = {};
     target_data.inpstn_target_fmt = "SU2_CSV";
     target_data.inpstn_flag_method_coefficients = "RBF_LINEAR";
@@ -476,7 +502,8 @@ void read_soldata ( const std::string filename, target_set_data &target_data,
             name = line.substr(0, delimiterPos);
             value = line.substr(delimiterPos + 1);
 //
-            switch (read_keyword_type(name)) {        
+            switch (read_keyword_type(name)) {
+                case DATABASE_NAME: { target_data.inpstn_database_name = value; break; }        
                 case TARGET_LIST: { target_data.inpstn_target_list = value; break; }
                 case TARGET_FMT: { target_data.inpstn_target_fmt = value; break; }
                 case MODAL_METHOD_COEFFICIENTS: { target_data.inpstn_flag_method_coefficients = value; break; }
@@ -527,25 +554,20 @@ void read_lowdim_model_data( ld_model_data &lowdim_data ) {
     std::vector<double> tmp;
 //
 //  Low dimensional model data
-    lowdim_data.lowdim_model_name = {};
+    lowdim_data.database_name = {};
     lowdim_data.reduction_strategy = {};
-    lowdim_data.field_type = {};
-    lowdim_data.field_attr = {};
-    lowdim_data.fields = {};   
-    lowdim_data.n_flds = 0;  
+    lowdim_data.n_flds = 0;
     lowdim_data.n_meth = 0;    
-    lowdim_data.flds_name = {};
-    lowdim_data.ref_field = {};
 //
-    if ( lowdim_data.inpstn_lowdim_model_name.empty() ) {
+    if ( lowdim_data.inpstn_database_name.empty() ) {
 //
         std::cout << " " << std::endl;
-        std::cout << "-> Error: The keyword LOW_DIMENSIONAL_MODEL_NAME is missing in configuration file." << std::endl;        
+        std::cout << "-> Error: The keyword DATABASE_NAME is missing in configuration file." << std::endl;        
         std::cout << " " << std::endl;
         exit (EXIT_FAILURE);
 //
     } else {
-        lowdim_data.lowdim_model_name = lowdim_data.inpstn_lowdim_model_name;
+        lowdim_data.database_name = lowdim_data.inpstn_database_name;
     }
 //
     if ( lowdim_data.inpstn_reduction_strategy.empty() ) {
@@ -566,7 +588,40 @@ void read_lowdim_model_data( ld_model_data &lowdim_data ) {
 //
     }
 //
-    if ( lowdim_data.inpstn_flag_fields.empty() ) {
+}
+//
+//
+//-------------------------------------------------------------------------------------------------------
+void read_fields_data ( flds_data &fields_data ) {
+//-------------------------------------------------------------------------------------------------------
+//
+    int counter;
+    int pcount;
+    std::string substr;
+    std::vector<double> tmp;
+//
+//  Fields data
+    fields_data.database_name = {};
+    fields_data.field_type = {};
+    fields_data.field_attr = {};
+    fields_data.fields = {};   
+    fields_data.n_flds = 0;  
+    fields_data.flds_name = {};
+    fields_data.ref_field = {};
+
+//
+    if ( fields_data.inpstn_database_name.empty() ) {
+//
+        std::cout << " " << std::endl;
+        std::cout << "-> Error: The keyword DATABASE_NAME is missing in configuration file." << std::endl;        
+        std::cout << " " << std::endl;
+        exit (EXIT_FAILURE);
+//
+    } else {
+        fields_data.database_name = fields_data.inpstn_database_name;
+    }
+//
+    if ( fields_data.inpstn_flag_fields.empty() ) {
 //
         std::cout << " " << std::endl;
         std::cout << "-> Error: The keyword FLAG_FIELDS is missing in configuration file." << std::endl;        
@@ -575,43 +630,44 @@ void read_lowdim_model_data( ld_model_data &lowdim_data ) {
 //
     } else {
 //
-        std::stringstream sstream(lowdim_data.inpstn_flag_fields);
+        std::stringstream sstream(fields_data.inpstn_flag_fields);
         counter = 0;                
         while ( sstream.good() ) {
             getline(sstream, substr, ','); 
 //
             if ( counter == 0 ) {
-                lowdim_data.field_type = substr;
+                fields_data.field_type = substr;
                 counter ++;
             } else {
-                lowdim_data.fields.push_back(std::stoi(substr));
+                fields_data.fields.push_back(std::stoi(substr));
             }
 //
         }
-        sort(lowdim_data.fields.begin(), lowdim_data.fields.end());
+        sort(fields_data.fields.begin(), fields_data.fields.end());
 //        
-        if ( lowdim_data.field_type == "VECTOR" || lowdim_data.field_type == "CONSERVATIVE" || 
-            lowdim_data.field_type == "PRIMITIVE" || lowdim_data.field_type == "VELOCITY" || 
-            lowdim_data.field_type == "AEROLOADS") {
-            lowdim_data.n_flds = 1;
+        if ( fields_data.field_type == "VECTOR" || fields_data.field_type == "CONSERVATIVE" || 
+            fields_data.field_type == "PRIMITIVE" || fields_data.field_type == "VELOCITY" || 
+            fields_data.field_type == "AEROLOADS") {
+            fields_data.n_flds = 1;
         } else {
-            lowdim_data.n_flds = lowdim_data.fields.size();
+            fields_data.n_flds = fields_data.fields.size();
         }
     }
 //
-    if ( !lowdim_data.inpstn_fields_name.empty() ) {
+    if ( !fields_data.inpstn_fields_name.empty() ) {
 //
-        std::stringstream sstream(lowdim_data.inpstn_fields_name);
+        std::stringstream sstream(fields_data.inpstn_fields_name);
         while ( sstream.good() ) {
             getline(sstream, substr, ',');
-            lowdim_data.flds_name.push_back(substr);
+            fields_data.flds_name.push_back(substr);
         }
     }
 //
-    lowdim_data.field_attr = lowdim_data.inpstn_fields_attribute;
-    lowdim_data.ref_field = lowdim_data.inpstn_ref_field;
+    fields_data.field_attr = fields_data.inpstn_fields_attribute;
+    fields_data.ref_field = fields_data.inpstn_ref_field;
 //
 }
+//
 //
 //-------------------------------------------------------------------------------------------------------
 void read_training_set_data( training_set_data &training_data ) {
@@ -827,6 +883,17 @@ void read_target_set_data( target_set_data &target_data ) {
     target_data.modes_sel_meth = {};
     target_data.target_list = {};
     target_data.target_ldmodel = {};
+//
+    if ( target_data.inpstn_database_name.empty() ) {
+//
+        std::cout << " " << std::endl;
+        std::cout << "-> Error: The keyword DATABASE_NAME is missing in configuration file." << std::endl;        
+        std::cout << " " << std::endl;
+        exit (EXIT_FAILURE);
+//
+    } else {
+        target_data.database_name = target_data.inpstn_database_name;
+    }
 //
     if ( target_data.inpstn_target_list.empty() ) {
         std::cout << " " << std::endl;
@@ -1067,196 +1134,14 @@ Eigen::MatrixXi CMesh::GetConnectivity(){
     return Connectivity;
 }
 //
-//// --------------------------------------------------------------------------------------------------------------
-//void CMesh::read( std::ifstream &fstream, const std::string &format ) {
-//// --------------------------------------------------------------------------------------------------------------
-////
-//    int ln = 0;
-//    std::string line;
-//    std::string value;
-//    std::string substr;
-//    size_t delimiterPos;
-////
-//    std::cout << std::endl;
-//    std::cout << " Reading " << format << " mesh ..." << std::endl;
-////
-//    switch ( read_mesh_format(format) ) {
-////
-//        case SU2: {
-////
-//            while ( getline( fstream, line ) ) {
-////
-////              Remove leading spaces, ignore hashtag and blank lines
-//                line = ltrim(line);
-//                if ( line[0] == '#' || line.empty() )
-//                    continue;
-////
-//                delimiterPos = line.find("=");
-//                substr = line.substr(0, delimiterPos);
-//                value = line.substr(delimiterPos + 1);
-////
-//                switch ( su2mesh_keyword(substr) ) {
-////
-//                    case NDIME: { sdim = std::stoi(value); break; }
-////
-//                    case NELEM: {
-////
-//                        nelements = std::stoi(value);
-//                        std::vector<int> nodes;
-////
-//                        for ( int i = 0; i < nelements; i++ ) {
-////
-//                            int p = 0;
-//                            getline( fstream, line );
-//                            line = ltrim(line);
-////
-//                            delimiterPos = line.find(" ");
-//                            value = line.substr(0, delimiterPos);
-//                            std::stringstream sstream(line.substr(delimiterPos + 1));
-////
-//                            if ( std::stoi(value) == 3 ) {           // Line element
-////
-//                                while ( sstream.good() ) {
-//                                    getline(sstream, substr, ' ');
-//                                    nodes.push_back(std::stoi(substr));
-//                                    p++;
-//                                    if ( p == 2 ) {
-//                                        segm.push_back(nodes);
-//                                        nodes.clear();
-//                                        break;
-//                                    }
-//                                }
-////
-//                            } else if ( std::stoi(value) == 5 ) {    // Triangular element
-////
-//                                while ( sstream.good() ) {
-//                                    getline(sstream, substr, ' ');
-//                                    nodes.push_back(std::stoi(substr));
-//                                    p++;
-//                                    if ( p == 3 ) {
-//                                        tria.push_back(nodes);
-//                                        nodes.clear();
-//                                        break;
-//                                    }
-//                                }
-////
-//                            } else if ( std::stoi(value) == 9 ) {    // Quadrilateral element
-////
-//                                while ( sstream.good() ) {
-//                                    getline(sstream, substr, ' ');
-//                                    nodes.push_back(std::stoi(substr));
-//                                    p++;
-//                                    if ( p == 4 ) {
-//                                        quad.push_back(nodes);
-//                                        nodes.clear();
-//                                        break;
-//                                    }
-//                                }
-////
-//                            } else if ( std::stoi(value) == 10 ) {   // Tetrahedron
-////
-//                                while ( sstream.good() ) {
-//                                    getline(sstream, substr, ' ');
-//                                    nodes.push_back(std::stoi(substr));
-//                                    p++;
-//                                    if ( p == 4 ) {
-//                                        tetra.push_back(nodes);
-//                                        nodes.clear();
-//                                        break;
-//                                    }
-//                                }
-////
-//                            } else if ( std::stoi(value) == 12 ) {   // Hexahedron
-////
-//                                while ( sstream.good() ) {
-//                                    getline(sstream, substr, ' ');
-//                                    nodes.push_back(std::stoi(substr));
-//                                    p++;
-//                                    if ( p == 8 ) {
-//                                        hexa.push_back(nodes);
-//                                        nodes.clear();
-//                                        break;
-//                                    }
-//                                }
-////
-//                            } else if ( std::stoi(value) == 13 ) {   // Prism
-////
-//                                while ( sstream.good() ) {
-//                                    getline(sstream, substr, ' ');
-//                                    nodes.push_back(std::stoi(substr));
-//                                    p++;
-//                                    if ( p == 6 ) {
-//                                        prism.push_back(nodes);
-//                                        nodes.clear();
-//                                        break;
-//                                    }
-//                                }
-////
-//                            } else if ( std::stoi(value) == 14 ) {   // Pyramid
-////
-//                                while ( sstream.good() ) {
-//                                    getline(sstream, substr, ' ');
-//                                    nodes.push_back(std::stoi(substr));
-//                                    p++;
-//                                    if ( p == 5 ) {
-//                                        pyra.push_back(nodes);
-//                                        nodes.clear();
-//                                        break;
-//                                    }
-//                                }
-////
-//                            }
-////
-//                        }
-//                        break; }
-////
-//                    case NPOIN: {
-////
-//                        npoints = std::stoi(value);
-//                        std::vector<double> coords;
-//                        int p;
-////
-//                        for ( int i = 0; i < npoints; i++ ) {
-////
-//                            getline( fstream, line );
-//                            line = ltrim(line);
-//                            std::stringstream sstream(line);
-////
-//                            p = 0;
-//                            while ( sstream.good() ) {
-//                                getline(sstream, substr, ' ');
-//                                coords.push_back(std::stod(substr));
-//                                p++;
-//                                if ( p == sdim ) {
-//                                    coordinates.push_back(coords);
-//                                    coords.clear();
-//                                    break;
-//                                }
-//                            }
-//                        }
-////
-//                        break; }
-////
-//                    case NMARK: { nboundaries = std::stoi(value); break; }
-////
-//                    case MARKER_TAG: { break; }
-//                    case MARKER_ELEMS: { break; }
-//                    default: { continue; break; }
-//                }
-//            }
-//            break; }
-////
-//        case CGNSM: { std::cout << "-> Error: CGNS mesh format not supported yet" << std::endl; exit (EXIT_FAILURE); break; }
-//        case VTK:  { std::cout << "-> Error: VTK mesh format not supported yet" << std::endl; exit (EXIT_FAILURE); break; }
-////
-//    }
-//
-//std::cout << npoints << " " << nelements << " " << nboundaries << " " << tetra.size() << " " << hexa.size() << " " << pyra.size() << std::endl;
-//
-//}
-////
 // --------------------------------------------------------------------------------------------------------------
-void CMesh::read( std::ifstream &fstream, const std::string &format ) {
+Eigen::VectorXi CMesh::GetPointID(){
+// --------------------------------------------------------------------------------------------------------------
+    return PointID;
+}
+//
+// --------------------------------------------------------------------------------------------------------------
+void CMesh::read ( std::ifstream &fstream, const std::string &format ) {
 // --------------------------------------------------------------------------------------------------------------
 //
     int ln = 0;
@@ -1272,7 +1157,12 @@ void CMesh::read( std::ifstream &fstream, const std::string &format ) {
 //
         case SU2: {
 //
-            while ( getline( fstream, line ) ) {
+//          Flag for nodes/surface, elements per marker, vec<vec> temporary storage for surf. connect.
+            std::vector<int> flag_v;  // changed to int should be fine though for logic still
+            std::vector<int> melem_tag;
+            std::vector<std::vector<int>> SC_vec;
+//
+            while ( getline ( fstream, line) ) {
 //
 //              Remove leading spaces, ignore hashtag and blank lines
                 line = ltrim(line);
@@ -1290,8 +1180,8 @@ void CMesh::read( std::ifstream &fstream, const std::string &format ) {
                     case NELEM: {
 //
                         nelements = std::stoi(value);
-                        if ( sdim == 2 ) Connectivity = (-1)*Eigen::MatrixXi::Ones(nelements,6);
-                        else Connectivity = (-1)*Eigen::MatrixXi::Ones(nelements,10);
+                        if ( sdim == 2 ) { Connectivity.setConstant(nelements, 6, -1); }
+                        else { Connectivity.setConstant(nelements, 10, -1); }
 //
                         for ( int i = 0; i < nelements; i++ ) {
 //
@@ -1302,7 +1192,7 @@ void CMesh::read( std::ifstream &fstream, const std::string &format ) {
                             int p = 0;
                             while ( sstream.good() ) {
                                 getline(sstream, substr, ' ');
-                                Connectivity(i,p) = std::stod(substr);
+                                Connectivity(i,p) = std::stoi(substr);
                                 p++;
                             }
                         }
@@ -1312,7 +1202,7 @@ void CMesh::read( std::ifstream &fstream, const std::string &format ) {
                     case NPOIN: {
 //
                         npoints = std::stoi(value);
-                        Coords = Eigen::MatrixXd::Zero(npoints,sdim);
+                        Coords.setZero(npoints, sdim);
 //
                         for ( int i = 0; i < npoints; i++ ) {
 //
@@ -1326,21 +1216,97 @@ void CMesh::read( std::ifstream &fstream, const std::string &format ) {
                             }
                         }
 //
+//                      Check if VOLUME or SURFACE mesh is of interest. If VOLUME set PointID incrementally and terminate function. If SURFACE init flag_v and cont. looping through.
+                        if ( m_fields_data.field_attr == "VOLUME" ) {                             //devnote: use find() as well. Add marker names to same line/variable.
+                            PointID.setZero(npoints);
+                            for ( int i = 0; i < npoints; i++ )
+                                PointID(i, 1) += i;                          
+                            return; }
+                        else if ( m_fields_data.field_attr == "SURFACE" ) { flag_v.resize ( npoints, 0 ); }
+                        else { std::cout << "Error: Invalid Field Attribute" << std::endl; }
+//                          
                         break; }
 //
-                    case NMARK: { nboundaries = std::stoi(value); break; }
+                    case MARKER_TAG: { mtag = value; break; }
+                    case MARKER_ELEMS: {
+// 
+                        if ( mtag.find("airfoil") != std::string::npos ) {
 //
-                    case MARKER_TAG: { break; }
-                    case MARKER_ELEMS: { break; }
+                            int melem = std::stoi(value);
+                            melem_tag.push_back(melem);
+//
+                            for ( int i = 0; i < melem; i++ ) {
+//
+                                getline ( fstream, line );
+                                line = ltrim(line);
+                                std::stringstream sstream ( line );
+//
+                                std::vector<int> row;
+                                while ( sstream.good() ) {
+                                    try {
+                                        getline(sstream, substr, ' ');       
+                                        row.push_back(std::stoi(substr));
+                                    } catch ( const std::invalid_argument &invarg ) { break; }
+                                }
+//
+//                              Fill SC_vec with current row.
+                                SC_vec.push_back(row);
+//
+//                              Erase first element (shape id), change logic flag value
+                                row.erase(row.begin());
+                                for(std::vector<int>::size_type i = 0; i != row.size(); i++) {
+                                    flag_v[row[i]] = 1;
+                                }
+                                                  
+                            }
+//                             
+                        }
+// 
+                        break; }
+//
                     default: { continue; break; }
                 }
+//
             }
+//
+//          Declare matrices and find sum of true flags and total number of marker elements
+            Eigen::MatrixXi SurfaceConnect;
+            Eigen::MatrixXd SurfaceCoords;
+            int sum_flag_v = std::count(flag_v.begin(), flag_v.end(), true);
+            int sum_melem = std::accumulate(melem_tag.begin(), melem_tag.end(), 0);
+
+//          Initialise surface matrices and PointID
+            SurfaceConnect.setConstant(sum_melem, 4, -1);
+            SurfaceCoords.setZero(sum_flag_v, sdim);
+            PointID.setZero(sum_flag_v); // or -1
+//
+//          Loop through to fill surface matrices and point id                                      
+            for ( int i = 0; i < sum_melem; i++ ) {
+                for (std::vector<int>::size_type j = 0; j != SC_vec[i].size(); j++) { 
+                    SurfaceConnect(i, j) = SC_vec[i][j];
+                }
+            }
+//
+            int fv = 0;
+            for ( int i = 0; i < npoints; i++ ) {    
+                if ( flag_v[i] ) {
+                    SurfaceCoords.row(fv) = Coords.row(i);
+                    PointID(fv,1) = i;
+                    fv++;
+                }
+            }                     
+//
+//          Replace original Connectivity and Coords matrix with Surface ones  
+            Connectivity = SurfaceConnect;
+            Coords = SurfaceCoords;
+//
             break; }
 //
         case CGNSM: { std::cout << "-> Error: CGNS mesh format not supported yet" << std::endl; exit (EXIT_FAILURE); break; }
         case VTK:  { std::cout << "-> Error: VTK mesh format not supported yet" << std::endl; exit (EXIT_FAILURE); break; }
 //
     }
+//
 }
 //
 // --------------------------------------------------------------------------------------------------------------
@@ -1648,4 +1614,35 @@ void modify_su2_cfg ( std::string file_in, std::string file_out, double dt_res )
         exit (EXIT_FAILURE);
     }
 }
+//
+// -------------------------------------------------------------------------------------------
+void create_h5_attr (Group group, const std::string att_name, const std::string att_val) { 
+// -------------------------------------------------------------------------------------------
+//
+    StrType stype(0, H5T_VARIABLE);
+    DataSpace att_space(H5S_SCALAR); 
+    Attribute att = group.createAttribute( att_name, stype, att_space );
+    att.write( stype, att_val);
+    att_space.close();
+//
+}
+//
+// -------------------------------------------------------------------------------------------
+std::string read_h5_attr ( Group group, const std::string att_name ) {
+// -------------------------------------------------------------------------------------------
+//
+    std::string att_val;
+//
+    Attribute att = group.openAttribute(att_name);
+    DataType dtype = att.getDataType();
+//
+    att.read(dtype, att_val);
+//
+    dtype.close();
+    att.close();
+//
+    return att_val;
+//
+}
+//
 

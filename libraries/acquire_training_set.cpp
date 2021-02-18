@@ -2,7 +2,7 @@
 \file acquire_training_set.cpp
 * \brief Subroutines and functions to acquire and generate snapshots set.
 *
-* Copyright 2016-2020, Aerospace Centre of Excellence University of Strathclyde
+* Copyright 2016-2021, Aerospace Centre of Excellence University of Strathclyde
 *
 * RAZOR is free software; you can redistribute it and/or
 * modify it under the terms of the GNU Lesser General Public
@@ -22,29 +22,29 @@
 //
 // ----------------------------------------------------------------------------------------
 Eigen::MatrixXd generate_snap_matrix( const int fld_id, const int Ni, std::ifstream 
-    filestream[], ld_model_data lowdim_data, training_set_data training_data ) {
+    filestream[], flds_data fields_data, training_set_data training_data ) {
 // ----------------------------------------------------------------------------------------
 //
-    if ( lowdim_data.field_type == "SCALAR" ) {
+    if ( fields_data.field_type == "SCALAR" ) {
         std::cout << std::endl;
-        std::cout << " Building snapshot matrix for SCALAR field ID " << lowdim_data.fields[fld_id] << std::endl;
+        std::cout << " Building snapshot matrix for SCALAR field ID " << fields_data.fields[fld_id] << std::endl;
         std::cout << " - estimated memory for the snapshots matrix is " 
         << Ni*training_data.n_snap*8.0/1000000.0 << "Mb" << std::endl;
     } else {
         std::cout << std::endl;
         std::cout << " Building snapshot matrix for VECTOR field with components ID (";
-        for ( int i=0; i<lowdim_data.fields.size() ; i++ ) {
-            std::cout << lowdim_data.fields[i]; }
+        for ( int i=0; i<fields_data.fields.size() ; i++ ) {
+            std::cout << fields_data.fields[i]; }
             std::cout << " )" << std::endl;
         std::cout << " - estimated memory for the snapshots matrix is " 
-        << lowdim_data.fields.size()*Ni*training_data.n_snap*8.0/1000000.0 << "Mb" << std::endl;
+        << fields_data.fields.size()*Ni*training_data.n_snap*8.0/1000000.0 << "Mb" << std::endl;
     }
 //
     int Nj = training_data.n_snap; 
-    std::string fld_type = lowdim_data.field_type;
-    std::vector<int> fields = lowdim_data.fields;
+    std::string fld_type = fields_data.field_type;
+    std::vector<int> fields = fields_data.fields;
     std::string filefmt = training_data.snap_fmt;
-    std::string reffield_type = lowdim_data.ref_field;
+    std::string reffield_type = fields_data.ref_field;
 //
     Eigen::MatrixXd snap_matrix;
     Eigen::MatrixXd snap_field;

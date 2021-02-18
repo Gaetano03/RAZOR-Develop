@@ -2,7 +2,7 @@
 \file modal_identification.hpp
 * \brief Subroutines and functions to generate a low dimensional model.
 *
-* Copyright 2016-2020, Aerospace Centre of Excellence University of Strathclyde
+* Copyright 2016-2021, Aerospace Centre of Excellence University of Strathclyde
 *
 * RAZOR is free software; you can redistribute it and/or
 * modify it under the terms of the GNU Lesser General Public
@@ -52,10 +52,13 @@ public:
 		nr = 0;
 	}
 //
+    static inline Eigen::MatrixXcd phi_flds;
+    static inline Eigen::MatrixXd alpha_flds;
+//
 	virtual void compute_correlation_matrix( Eigen::MatrixXd &snap_matrix, modal_identification_data &modal_data ) = 0;
 	virtual void compute_modes( Eigen::MatrixXd &snap_matrix ) = 0;
 	virtual void get_modal_coefficients() = 0;
-	void save_modal_representation();
+	virtual void save_modal_representation(ld_model_data &lowdim_data, int i) = 0;
 //
 };
 //
@@ -74,6 +77,7 @@ public:
 	void compute_correlation_matrix( Eigen::MatrixXd &snap_matrix, modal_identification_data &modal_data );
 	void compute_modes( Eigen::MatrixXd &snap_matrix );
 	void get_modal_coefficients();
+    void save_modal_representation(ld_model_data &lowdim_data, int i);
 };
 //
 /*

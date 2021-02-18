@@ -1,6 +1,6 @@
 /* ------------------------------------------------------------------------------
-\file acquire_training_set.hpp
-* \brief Subroutines and functions to acquire a training set of observations.
+\file preprocessing.hpp
+* \brief Pre-processing snapshot and mesh data, saving to HDF5 file
 *
 * Copyright 2016-2021, Aerospace Centre of Excellence University of Strathclyde
 *
@@ -18,17 +18,27 @@
 * License along with RAZOR. If not, see <http://www.gnu.org/licenses/>.
 * ------------------------------------------------------------------------------*/
 //
-#ifndef acquire_training_set_hpp
-#define acquire_training_set_hpp
+#ifndef preprocessing_hpp
+#define preprocessing_hpp
 //
 #include "read_data.hpp"
+#include "acquire_training_set.hpp"
+#include "write_data.hpp"
 //
 //------------------------------------------------------------------------------            
 // Functions
 //------------------------------------------------------------------------------            
 //
-//!< \brief Generate snapshot matrix
-Eigen::MatrixXd generate_snap_matrix( const int fld_id, const int Ni, std::ifstream 
-	filestream[], flds_data fields_data, training_set_data training_data );
+//!< \brief 
+int preprocess_data ( const std::string filedata );
+//
+//!< \brief Create H5 file and save fields' and trainingset info as attributes
+void save_attributes ( flds_data &fields_data, training_set_data &training_data );
+//
+//!< \brief Save snapshots into database (created by function above)
+void save_snap_matrix ( Eigen::MatrixXd &snap_matrix, flds_data &fields_data, int &field_id );
+//
+//!< \brief Read and save mesh into h5 database
+Eigen::VectorXi save_mesh (flds_data &fields_data, training_set_data &training_data );                                      
 //
 #endif
